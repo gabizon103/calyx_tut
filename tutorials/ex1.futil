@@ -1,0 +1,75 @@
+import "../calyx/primitives/core.futil";
+
+component main(@go go:1) -> (@done done:1) {
+  cells {
+    @external(1) mem = std_mem_d1(32, 1, 1);
+    val = std_reg(32);
+    add = std_add(32);
+    counter = std_reg(32);
+    add2 = std_add(32);
+    lt = std_lt(32);
+  }
+  wires {
+    // write 0 to counter reg
+    group init {
+      counter.in = 32'd0;
+      counter.write_en = 1'b1;
+      init[done] = counter.done;
+    }
+    // increment counter reg
+    group incr {
+      add2.left = counter.out;
+      add2.right = 32'd1;
+      counter.in = add2.out;
+      counter.write_en = 1'b1;
+      incr[done] = counter.done;
+    }
+
+    // compute condition
+    comb group cond {
+      lt.left = counter.out;
+      lt.right = 32'd8;
+    }
+
+    // read from mem into reg
+    group read {
+      mem.addr0 = 1'b0;
+      val.in = mem.read_data;
+      val.write_en = 1'b1;
+      read[done] = val.done;
+    }
+
+    // add 4 to the value in reg
+    group upd {
+      add.left = val.out;
+      add.right = 32'd4;
+      val.in = add.out;
+      val.write_en = 1'b1;
+      upd[done] = val.done;
+    }
+
+    // write reg value back to mem
+    group write {
+      mem.addr0 = 1'b0;
+      mem.write_data = val.out;
+      mem.write_en = 1'b1;
+      write[done] = mem.done;
+    }
+      
+  }
+  control {
+    seq {
+      init;
+      while lt.out with cond {
+        par {
+          seq {
+            read;
+            upd;
+            write;
+          }
+          incr;
+        }
+      }
+    }
+  }
+}
