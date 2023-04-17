@@ -1,0 +1,161 @@
+import "../calyx/primitives/core.futil";
+import "../calyx/primitives/binary_operators.futil";
+
+// matrix multiplication to compute A*B
+
+// want to pass memories A and B by reference into dot_prod
+component main() -> () {
+  cells {
+    // inputs A and B stored in mem
+    // an element A_cr is stored in A[N*r + c], where N is the size
+    // of the matrix
+    @external(1) A = std_mem_d1(32,4,4);
+    @external(1) B = std_mem_d1(32,4,4);
+
+    // where we put the output
+    @external(1) C = std_mem_d1(32,4,4);
+
+    // for reading an element from memories
+    A_elt = std_reg(32);
+    B_elt = std_reg(32);
+
+    // LOOP THINGS
+    // keeping track of how many things to add
+    counter = std_reg(4);
+
+    // adder for incrementing counter
+    add_cond = std_add(4);
+
+    // for computing condition
+    lt_cond = std_lt(4);
+
+    // accumulator for result
+    accum = std_reg(32);
+
+    // adder for accumulator
+    add_accum = std_add(32);
+
+    // multiplier for computing dot prod
+    mult0 = std_mult_pipe(32);
+
+    // multiplier for computing addr
+    mult_addr = std_mult_pipe(32);
+
+    // adder for computing addr
+    add_addr = std_add(32);
+
+    // for storing result of each multiplication
+    prod = std_reg(32);
+    prod1 = std_reg(32);
+  }
+  wires {
+    // put 0 in counter
+    group init {
+      counter.in = 4'd0;
+      counter.write_en = 1'd1;
+      init[done] = counter.done;
+    }
+
+    // loop condition - counter < 4 (because 4x4 matrices)
+    comb group cond {
+      lt_cond.left = counter.out;
+      lt_cond.right = 4'd4;
+    }
+
+    group readA {
+      A.addr0 = counter.out;
+      A_elt.write_en = 1'd1;
+      A_elt.in = A.read_data;
+      readA[done] = A_elt.done;
+    }
+
+    group readB {
+      B.addr0 = counter.out;
+      B_elt.write_en = 1'd1;
+      B_elt.in = B.read_data;
+      readB[done] = B_elt.done;
+    }
+
+    group doMult {
+      prod.in = mult0.out;
+      prod.write_en = mult0.done;
+      doMult[done] = prod.done;
+      mult0.left = A_elt.out;
+      mult0.right = B_elt.out;
+      mult0.go = !mult0.done ? 1'd1;
+    }
+
+    group updResult {
+      prod1.in = prod.out;
+      prod1.write_en = 1'd1;
+      updResult[done] = prod1.done;
+    }
+
+    group addResult {
+      C.addr0 = 4'd0;
+      add_accum.left = prod1.out;
+      add_accum.right = C.read_data;
+      C.write_en = 1'd1;
+      C.write_data = add_accum.out;
+      addResult[done] = C.done;
+    }
+
+    // group compute_partial {
+    //   prod.in = mult0.out;
+    //   prod.write_en = mult0.done;
+    //   compute_partial[done] = prod.done;
+    //   // read things from mem into regs
+    //   A.addr0 = counter.out;
+    //   B.addr0 = counter.out;
+    //   A_elt.in = A.read_data;
+    //   B_elt.in = B.read_data;
+    //   A_elt.write_en = 1'd1;
+    //   B_elt.write_en = 1'd1;
+
+    //   // do multiplication
+    //   mult0.left = A_elt.out;
+    //   mult0.right = B_elt.out;
+    //   // only go if not done
+    //   mult0.go = !mult0.done ? 1'd1;
+    // }
+
+    // group add_partial {
+    //   add_accum.left = prod.out;
+    //   add_accum.right = accum.out;
+    //   accum.in = add_accum.out;
+    //   accum.write_en = 1'd1;
+    //   add_partial[done] = accum.done;
+    // }
+
+    // group store {
+    //   C.addr0 = 4'd0;
+    //   C.write_data = accum.out;
+    //   C.write_en = 1'd1;
+    //   store[done] = C.done;
+    // }
+
+    group incr {
+      add_cond.left = counter.out;
+      add_cond.right = 4'd1;
+      counter.in = add_cond.out;
+      counter.write_en = 1'd1;
+      incr[done] = counter.done ? 1'd1;
+    }
+  }
+  control {
+    seq {
+      init;
+      while lt_cond.out with cond {
+        seq {
+          readA;
+          readB;
+          doMult;
+          updResult;
+          addResult;
+          incr;
+        }
+      }
+      
+    }
+  }
+}
