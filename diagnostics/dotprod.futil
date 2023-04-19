@@ -1,40 +1,19 @@
 import "../calyx/primitives/core.futil";
 import "../calyx/primitives/binary_operators.futil";
 
-// matrix multiplication to compute A*B
+// do the dotprod in main, don't have to pass anything by reference
 
-// want to pass memories A and B by reference into dot_prod
-
-// component main() -> () {
-//   cells {
-//     @external(1) memA = std_mem_d2(32,4,4,4,4);
-//     @external(1) memB = std_mem_d2(32,4,4,4,4);
-//     @external(1) memC = std_mem_d2(32,4,4,4,4);
-//     dot = dotprod();
-//   }
-//   wires {
-//     group run_dotprod {
-//       dot.go = 1'd1;
-//       run_dotprod[done] = dot.done;
-//     }
-//   }
-//   control  {
-//     invoke dot[A = memA, B = memB, C = memC]()();
-//     run_dotprod;
-//   }
-// }
-
-// computes one element of resulting matrix
-component dotprod(row:4,col:4) -> () {
+// took < 30 sec to simulate
+component main() -> () {
   cells {
-    // inputs A and B stored in mem
-    // an element A_cr is stored in A[N*r + c], where N is the size
-    // of the matrix
-    ref A = std_mem_d2(32,4,4,4,4);
-    ref B = std_mem_d2(32,4,4,4,4);
+    @external(1) memA = std_mem_d2(32,4,4,4,4);
+    @external(1) memB = std_mem_d2(32,4,4,4,4);
 
     // where we put the output
-    ref C = std_mem_d2(32,4,4,4,4);
+    @external(1) memC = std_mem_d2(32,4,4,4,4);
+
+    row = std_const(4,0);
+    col = std_const(4,0);
 
     // for reading an element from memories
     A_elt = std_reg(32);
@@ -85,19 +64,19 @@ component dotprod(row:4,col:4) -> () {
 
     // read from mem A
     group readA {
-      A.addr0 = row;
-      A.addr1 = counter.out;
+      memA.addr0 = row.out;
+      memA.addr1 = counter.out;
       A_elt.write_en = 1'd1;
-      A_elt.in = A.read_data;
+      A_elt.in = memA.read_data;
       readA[done] = A_elt.done;
     }
 
     // read from mem B
     group readB {
-      B.addr0 = counter.out;
-      B.addr1 = col;
+      memB.addr0 = counter.out;
+      memB.addr1 = col.out;
       B_elt.write_en = 1'd1;
-      B_elt.in = B.read_data;
+      B_elt.in = memB.read_data;
       readB[done] = B_elt.done;
     }
 
@@ -120,13 +99,13 @@ component dotprod(row:4,col:4) -> () {
 
     // result += A[i] * B[i]
     group addResult {
-      C.addr0 = row;
-      C.addr1 = col;
+      memC.addr0 = row.out;
+      memC.addr1 = col.out;
       add_accum.left = prod1.out;
-      add_accum.right = C.read_data;
-      C.write_en = 1'd1;
-      C.write_data = add_accum.out;
-      addResult[done] = C.done;
+      add_accum.right = memC.read_data;
+      memC.write_en = 1'd1;
+      memC.write_data = add_accum.out;
+      addResult[done] = memC.done;
     }
 
     // increment counter
@@ -151,6 +130,7 @@ component dotprod(row:4,col:4) -> () {
           incr;
         }
       }
+      
     }
   }
 }

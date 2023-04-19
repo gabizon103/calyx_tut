@@ -1,0 +1,96 @@
+import "../calyx/primitives/core.futil";
+import "../calyx/primitives/binary_operators.futil";
+import "calyx_tut/matrixmul/dotprod.futil";
+
+component main() -> () {
+  cells {
+    @external(1) matrixA = std_mem_d2(32,4,4,4,4);
+    @external(1) matrixB = std_mem_d2(32,4,4,4,4);
+    @external(1) matrixC = std_mem_d2(32,4,4,4,4);
+    dot1 = dotprod();
+
+    // loop condition components
+    rowc = std_reg(4);
+    colc = std_reg(4);
+
+    lt_row = std_lt(4);
+    lt_col = std_lt(4);
+
+    // adders for loops
+    add_row = std_add(4);
+    add_col = std_add(4);
+  }
+  wires {
+    // initialize row counter to 0
+    group init_row {
+      rowc.in = 4'd0;
+      rowc.write_en = 1'd1;
+      init_row[done] = rowc.done;
+    }
+
+    // initialize col counter to 0
+    group init_col {
+      colc.in = 4'd0;
+      colc.write_en = 1'd1;
+      init_col[done] = colc.done;
+    }
+
+    // condition for row
+    comb group row_cond {
+      lt_row.left = rowc.out;
+      lt_row.right = 4'd4;
+    }
+
+    // condition for col
+    comb group col_cond {
+      lt_col.left = colc.out;
+      lt_col.right = 4'd4;
+    }
+
+    // do the dot prod and store in mem
+    group do_dot {
+      do_dot[done] = dot1.done;
+      dot1.row = rowc.out;
+      dot1.col = colc.out;
+      dot1.go = !dot1.done ? 1'd1;
+    }
+
+    // incr row counter
+    group incr_row {
+      add_row.left = rowc.out;
+      add_row.right = 4'd1;
+      rowc.write_en = 1'd1;
+      rowc.in = add_row.out;
+      incr_row[done] = rowc.done;
+    }
+
+    // incr col counter
+    group incr_col {
+      add_col.left = colc.out;
+      add_col.right = 4'd1;
+      colc.write_en = 1'd1;
+      colc.in = add_col.out;
+      incr_col[done] = colc.done;
+    }
+
+  }
+  control {
+    seq {
+      invoke dot1[A = matrixA, B = matrixB, C = matrixC]()();
+      init_row;
+      init_col;
+      while lt_col.out with col_cond {
+        seq {
+          init_row;
+          while lt_row.out with row_cond {
+            seq {
+              do_dot;
+              incr_row;
+            } 
+          }
+          incr_col;
+        }
+      }
+    }
+  }
+}
