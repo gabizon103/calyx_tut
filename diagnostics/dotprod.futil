@@ -1,5 +1,6 @@
 import "../calyx/primitives/core.futil";
 import "../calyx/primitives/binary_operators.futil";
+import "../calyx/primitives/unsynthesizable.futil";
 
 // do the dotprod in main, don't have to pass anything by reference
 
@@ -12,8 +13,8 @@ component main() -> () {
     // where we put the output
     @external(1) memC = std_mem_d2(32,4,4,4,4);
 
-    row = std_const(4,0);
-    col = std_const(4,0);
+    row = std_const(4,1);
+    col = std_const(4,1);
 
     // for reading an element from memories
     A_elt = std_reg(32);
@@ -38,8 +39,8 @@ component main() -> () {
     // multiplier for computing dot prod
     mult0 = std_mult_pipe(32);
 
-    // multiplier for computing addr
-    mult_addr = std_mult_pipe(32);
+    // multiplier for computing dot prod (but different)
+    mult1 = std_unsyn_mult(32);
 
     // adder for computing addr
     add_addr = std_add(32);
@@ -88,6 +89,12 @@ component main() -> () {
       mult0.left = A_elt.out;
       mult0.right = B_elt.out;
       mult0.go = !mult0.done ? 1'd1;
+
+      // mult1.right = A_elt.out;
+      // mult1.left = B_elt.out;
+      // prod.in = mult1.out;
+      // prod.write_en = 1'd1;
+      // doMult[done] = prod.done;
     }
 
     // store result of mult

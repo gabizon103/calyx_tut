@@ -8,6 +8,7 @@ component main() -> () {
     @external(1) matrixB = std_mem_d2(32,4,4,4,4);
     @external(1) matrixC = std_mem_d2(32,4,4,4,4);
     dot1 = dotprod();
+    dot2 = dotprod();
 
     // loop condition components
     rowc = std_reg(4);
@@ -48,12 +49,19 @@ component main() -> () {
     }
 
     // do the dot prod and store in mem
-    group do_dot {
-      do_dot[done] = dot1.done;
+    group do_dot1 {
+      dot1.go = 1'd1;
       dot1.row = rowc.out;
       dot1.col = colc.out;
-      dot1.go = !dot1.done ? 1'd1;
+      do_dot1[done] = dot1.done;
     }
+
+    // group do_dot2 {
+    //   do_dot2[done] = dot2.done;
+    //   dot2.row = 4'd0;
+    //   dot2.col = 4'd1;
+    //   dot2.go = !dot2.done ? 1'd1;
+    // }
 
     // incr row counter
     group incr_row {
@@ -72,11 +80,11 @@ component main() -> () {
       colc.in = add_col.out;
       incr_col[done] = colc.done;
     }
-
   }
   control {
     seq {
       invoke dot1[A = matrixA, B = matrixB, C = matrixC]()();
+      // invoke dot2[A = matrixA, B = matrixB, C = matrixC]()();
       init_row;
       init_col;
       while lt_col.out with col_cond {
@@ -84,7 +92,7 @@ component main() -> () {
           init_row;
           while lt_row.out with row_cond {
             seq {
-              do_dot;
+              do_dot1;
               incr_row;
             } 
           }

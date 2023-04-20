@@ -1,5 +1,6 @@
 import "../calyx/primitives/core.futil";
 import "../calyx/primitives/binary_operators.futil";
+import "../calyx/primitives/unsynthesizable.futil";
 
 // matrix multiplication to compute A*B
 
@@ -11,16 +12,30 @@ import "../calyx/primitives/binary_operators.futil";
 //     @external(1) memB = std_mem_d2(32,4,4,4,4);
 //     @external(1) memC = std_mem_d2(32,4,4,4,4);
 //     dot = dotprod();
+//     dot1 = dotprod();
 //   }
 //   wires {
 //     group run_dotprod {
+//       dot.row = 4'd1;
+//       dot.col = 4'd1;
 //       dot.go = 1'd1;
 //       run_dotprod[done] = dot.done;
 //     }
+
+//     group run_dotprod1 {
+//       dot1.row = 4'd2;
+//       dot1.col = 4'd2;
+//       dot1.go = 1'd1;
+//       run_dotprod1[done] = dot1.done;
+//     }
 //   }
 //   control  {
-//     invoke dot[A = memA, B = memB, C = memC]()();
-//     run_dotprod;
+//     seq {
+//       invoke dot[A = memA, B = memB, C = memC]()();
+//       invoke dot1[A = memA, B = memB, C = memC]()();
+//       run_dotprod;
+//       run_dotprod1;
+//     }
 //   }
 // }
 
@@ -58,6 +73,7 @@ component dotprod(row:4,col:4) -> () {
 
     // multiplier for computing dot prod
     mult0 = std_mult_pipe(32);
+    mult1 = std_unsyn_mult(32);
 
     // multiplier for computing addr
     mult_addr = std_mult_pipe(32);
@@ -103,12 +119,18 @@ component dotprod(row:4,col:4) -> () {
 
     // perform A[i] * B[i]
     group doMult {
-      prod.in = mult0.out;
-      prod.write_en = mult0.done;
+      // prod.in = mult0.out;
+      // prod.write_en = mult0.done;
+      // doMult[done] = prod.done;
+      // mult0.left = A_elt.out;
+      // mult0.right = B_elt.out;
+      // mult0.go = !mult0.done ? 1'd1;
+
+      mult1.right = A_elt.out;
+      mult1.left = B_elt.out;
+      prod.in = mult1.out;
+      prod.write_en = 1'd1;
       doMult[done] = prod.done;
-      mult0.left = A_elt.out;
-      mult0.right = B_elt.out;
-      mult0.go = !mult0.done ? 1'd1;
     }
 
     // store result of mult

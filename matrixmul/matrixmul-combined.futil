@@ -1,0 +1,164 @@
+import "../calyx/primitives/core.futil";
+import "../calyx/primitives/binary_operators.futil";
+
+component main () -> () {
+  cells {
+    @external(1) matrixA = std_mem_d2(32,4,4,4,4);
+    @external(1) matrixB = std_mem_d2(32,4,4,4,4);
+    @external(1) matrixC = std_mem_d2(32,4,4,4,4);
+
+    // reading an elt from memories
+    A_elt = std_reg(32);
+    B_elt = std_reg(32);
+
+    // DOT PROD STUFF
+    // i for Ari * Bic 
+    dot_counter = std_reg(4);
+    dot_add = std_add(4);
+    dot_lt = std_lt(4);
+    dot_accum = std_reg(32);
+    add_accum = std_add(32);
+    dot_mult = std_mult_pipe(32);
+    prod = std_reg(32);
+    prod1 = std_reg(32);
+
+    // MATRIX MULT STUFF
+    rowc = std_reg(4);
+    colc = std_reg(4);
+
+    row_lt = std_lt(4);
+    col_lt = std_lt(4);
+
+    add_row = std_add(4);
+    add_col = std_add(4);
+  } 
+  wires {
+    // dot prod stuff
+    group init_dot {
+      dot_counter.in = 4'd0;
+      dot_counter.write_en = 1'd1;
+      init_dot[done] = dot_counter.done;
+    }
+
+    group init_row {
+      rowc.in = 4'd0;
+      rowc.write_en = 1'd1;
+      init_row[done] = rowc.done;
+    }
+
+    group init_col {
+      colc.in = 4'd0;
+      colc.write_en = 1'd1;
+      init_col[done] = colc.done;
+    }
+
+    comb group dot_cond {
+      dot_lt.left = dot_counter.out;
+      dot_lt.right = 4'd4;
+    }
+
+    comb group row_cond {
+      row_lt.left = rowc.out;
+      row_lt.right = 4'd4;
+    }
+
+    comb group col_cond {
+      col_lt.left = colc.out;
+      col_lt.right = 4'd4;
+    }
+
+    group readA {
+      matrixA.addr0 = rowc.out;
+      matrixA.addr1 = dot_counter.out;
+      A_elt.write_en = 1'd1;
+      A_elt.in = matrixA.read_data;
+      readA[done] = A_elt.done;
+    }
+
+    group readB {
+      matrixB.addr0 = dot_counter.out;
+      matrixB.addr1 = colc.out;
+      B_elt.write_en = 1'd1;
+      B_elt.in = matrixB.read_data;
+      readB[done] = B_elt.done;
+    }
+
+    group doMult {
+      prod.in = dot_mult.out;
+      prod.write_en = dot_mult.done;
+      doMult[done] = prod.done;
+      dot_mult.left = A_elt.out;
+      dot_mult.right = B_elt.out;
+      dot_mult.go = !dot_mult.done ? 1'd1;
+    }
+
+    group updResult {
+      prod1.in = prod.out;
+      prod1.write_en = 1'd1;
+      updResult[done] = prod1.done;
+    }
+
+    group addResult {
+      matrixC.addr0 = rowc.out;
+      matrixC.addr1 = colc.out;
+      add_accum.left = prod1.out;
+      add_accum.right = matrixC.read_data;
+      matrixC.write_en = 1'd1;
+      matrixC.write_data = add_accum.out;
+      addResult[done] = matrixC.done;
+    }
+
+    group incr_dot {
+      dot_add.left = dot_counter.out;
+      dot_add.right = 4'd1;
+      dot_counter.in = dot_add.out;
+      dot_counter.write_en = 1'd1;
+      incr_dot[done] = dot_counter.done ? 1'd1;
+    }
+
+    group incr_row {
+      add_row.left = rowc.out;
+      add_row.right = 4'd1;
+      rowc.in = add_row.out;
+      rowc.write_en = 1'd1;
+      incr_row[done] = rowc.done ? 1'd1;
+    }
+
+    group incr_col {
+      add_col.left = colc.out;
+      add_col.right = 4'd1;
+      colc.in = add_col.out;
+      colc.write_en = 1'd1;
+      incr_col[done] = colc.done ? 1'd1;
+    }
+  }
+  control {
+    seq {
+      init_dot;
+      init_row;
+      init_col;
+      while col_lt.out with col_cond {
+        seq {
+          init_row;
+          while row_lt.out with row_cond {
+            seq {
+              init_dot;
+              while dot_lt.out with dot_cond {
+                seq {
+                  readA;
+                  readB;
+                  doMult;
+                  updResult;
+                  addResult;
+                  incr_dot;
+                }
+              }
+              incr_row;
+            }
+          }
+          incr_col;
+        }
+      }
+    }
+  }
+}
