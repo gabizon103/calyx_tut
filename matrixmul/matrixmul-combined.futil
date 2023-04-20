@@ -1,6 +1,9 @@
 import "../calyx/primitives/core.futil";
 import "../calyx/primitives/binary_operators.futil";
 
+// A 4x4 matrix multiplier.
+// Runs in 1424 cycles.
+
 component main () -> () {
   cells {
     @external(1) matrixA = std_mem_d2(32,4,4,4,4);

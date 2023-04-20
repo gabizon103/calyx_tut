@@ -1,0 +1,18 @@
+Things I observed:
+
+1. Passing memories in by reference takes a lot longer to simulate compared to
+having everything in one main component. This was a little unfortunate because
+I preferred designing things in separate modules, but simulation took so long
+that it was not practical. TODO: look at the generated Verilog code in both cases.
+
+2. For some reason, the version of the multiplier that uses a separate dot product
+component does not work. However, the one that has everything in one single module 
+does work. The logic is the same, I literally copied most of it over.
+
+3. It was really enjoyable to write things in Calyx. It was easy to reason 
+about how the hardware should function and easy to express. It felt like A
+good balance between writing in a traditional HDL and writing in a high
+level language.
+
+TODO: try decreasing the amount of cycles it takes to run by doing
+things in parallel
