@@ -1,0 +1,161 @@
+import "calyx/primitives/core.futil";
+import "calyx/primitives/binary_operators.futil";
+
+component main() -> () {
+  cells {
+    @external(1) A = std_mem_d2(32,4,4,4,4);
+    @external(1) B = std_mem_d2(32,4,4,4,4);
+    @external(1) C = std_mem_d2(32,4,4,4,4);
+    dot0 = dotprod();
+    dot1 = dotprod();
+
+    rowc0 = std_const(4,0);
+    colc0 = std_const(4,0);
+
+    rowc1 = std_const(4,1);
+    colc1 = std_const(4,1);
+    //dot1 = dotprod();
+  }
+  wires {}
+  control {
+    par {
+      invoke dot0(row = rowc0.out, col = colc0.out, A_done = A.done, A_read_data = A.read_data,
+      B_done = B.done, B_read_data = B.read_data, C_done = C.done, C_read_data = C.read_data)
+      (A_write_data = A.write_data, A_write_en = A.write_en, A_addr0 = A.addr0, A_addr1 = A.addr1, 
+      B_write_data = B.write_data, B_write_en = B.write_en, B_addr0 = B.addr0, 
+      B_addr1 = B.addr1, C_write_data = C.write_data, C_write_en = C.write_en, C_addr0 = C.addr0,
+      C_addr1 = C.addr1);
+    }
+  }
+}
+
+
+// computes one element of resulting matrix
+component dotprod(row:4,col:4, A_done:1, A_read_data:32, 
+  B_done:1, B_read_data:32, C_done:1, C_read_data:32) -> (A_write_data:32, A_write_en:1, A_addr0:4, A_addr1:4,
+  B_write_data:32, B_write_en:1, B_addr0:4, B_addr1:4, C_write_data:32, C_write_en:1,
+  C_addr0:4, C_addr1:4) {
+
+  cells {
+    // inputs A and B stored in mem
+    // an element A_cr is stored in A[N*r + c], where N is the size
+    // of the matrix
+
+    // for reading an element from memories
+    A_elt = std_reg(32);
+    B_elt = std_reg(32);
+
+    // LOOP THINGS
+    // keeping track of how many things to add
+    counter = std_reg(4);
+
+    // adder for incrementing counter
+    add_cond = std_add(4);
+
+    // for computing condition
+    lt_cond = std_lt(4);
+
+    // accumulator for result
+    accum = std_reg(32);
+
+    // adder for accumulator
+    add_accum = std_add(32);
+
+    // multiplier for computing dot prod
+    mult0 = std_mult_pipe(32);
+
+    // multiplier for computing addr
+    mult_addr = std_mult_pipe(32);
+
+    // adder for computing addr
+    add_addr = std_add(32);
+
+    // for storing result of each multiplication
+    prod = std_reg(32);
+    prod1 = std_reg(32);
+  }
+  wires {
+    // put 0 in counter
+    group init {
+      counter.in = 4'd0;
+      counter.write_en = 1'd1;
+      init[done] = counter.done;
+    }
+
+    // loop condition - counter < 4 (because 4x4 matrices)
+    comb group cond {
+      lt_cond.left = counter.out;
+      lt_cond.right = 4'd4;
+    }
+
+    // read from mem A
+    group readA {
+      A_addr0 = row;
+      A_addr1 = counter.out;
+      A_elt.write_en = 1'd1;
+      A_elt.in = A_read_data;
+      readA[done] = A_elt.done;
+    }
+
+    // read from mem B
+    group readB {
+      B_addr0 = counter.out;
+      B_addr1 = col;
+      B_elt.write_en = 1'd1;
+      B_elt.in = B_read_data;
+      readB[done] = B_elt.done;
+    }
+
+    // perform A[i] * B[i]
+    group doMult {
+      prod.in = mult0.out;
+      prod.write_en = mult0.done;
+      doMult[done] = prod.done;
+      mult0.left = A_elt.out;
+      mult0.right = B_elt.out;
+      mult0.go = !mult0.done ? 1'd1;
+    }
+
+    // store result of mult
+    group updResult {
+      prod1.in = prod.out;
+      prod1.write_en = 1'd1;
+      updResult[done] = prod1.done;
+    }
+
+    // result += A[i] * B[i]
+    group addResult {
+      C_addr0 = row;
+      C_addr1 = col;
+      add_accum.left = prod1.out;
+      add_accum.right = C_read_data;
+      C_write_en = 1'd1;
+      C_write_data = add_accum.out;
+      addResult[done] = C_done;
+    }
+
+    // increment counter
+    group incr {
+      add_cond.left = counter.out;
+      add_cond.right = 4'd1;
+      counter.in = add_cond.out;
+      counter.write_en = 1'd1;
+      incr[done] = counter.done ? 1'd1;
+    }
+  }
+  control {
+    seq {
+      init;
+      while lt_cond.out with cond {
+        seq {
+          readA;
+          readB;
+          doMult;
+          updResult;
+          addResult;
+          incr;
+        }
+      }
+    }
+  }
+}

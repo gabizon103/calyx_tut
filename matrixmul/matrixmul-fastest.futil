@@ -1,0 +1,762 @@
+import "primitives/core.futil";
+import "primitives/binary_operators.futil";
+import "calyx_tut/matrixmul/dotprod2.futil";
+
+// A 4x4 matrix multiplier.
+// Runs in 82 cycles. For each dot product, the multiplications are computed
+// in parallel.
+
+component main () -> () {
+  cells {
+    @external(1) matrixA = std_mem_d2(32,4,4,4,4);
+    @external(1) matrixB = std_mem_d2(32,4,4,4,4);
+    @external(1) matrixC = std_mem_d2(32,4,4,4,4);
+
+    d00 = dotprod2();
+    d01 = dotprod2();
+    d02 = dotprod2();
+    d03 = dotprod2();
+    d10 = dotprod2();
+    d11 = dotprod2();
+    d12 = dotprod2();
+    d13 = dotprod2();
+    d20 = dotprod2();
+    d21 = dotprod2();
+    d22 = dotprod2();
+    d23 = dotprod2();
+    d30 = dotprod2();
+    d31 = dotprod2();
+    d32 = dotprod2();
+    d33 = dotprod2();
+
+    row_lt = std_lt(32);
+    col_lt = std_lt(32);
+    rowc = std_reg(32);
+    colc = std_reg(32);
+
+    // reading an elt from memories
+    // A_rc
+    A_elt00 = std_reg(32);
+    B_elt00 = std_reg(32);
+    A_elt01 = std_reg(32);
+    B_elt01 = std_reg(32);
+    A_elt02 = std_reg(32);
+    B_elt02 = std_reg(32);
+    A_elt03 = std_reg(32);
+    B_elt03 = std_reg(32);
+    
+    A_elt10 = std_reg(32);
+    B_elt10 = std_reg(32);
+    A_elt11 = std_reg(32);
+    B_elt11 = std_reg(32);
+    A_elt12 = std_reg(32);
+    B_elt12 = std_reg(32);
+    A_elt13 = std_reg(32);
+    B_elt13 = std_reg(32);
+
+    A_elt20 = std_reg(32);
+    B_elt20 = std_reg(32);
+    A_elt21 = std_reg(32);
+    B_elt21 = std_reg(32);
+    A_elt22 = std_reg(32);
+    B_elt22 = std_reg(32);
+    A_elt23 = std_reg(32);
+    B_elt23 = std_reg(32);
+
+    A_elt30 = std_reg(32);
+    B_elt30 = std_reg(32);
+    A_elt31 = std_reg(32);
+    B_elt31 = std_reg(32);
+    A_elt32 = std_reg(32);
+    B_elt32 = std_reg(32);
+    A_elt33 = std_reg(32);
+    B_elt33 = std_reg(32);
+
+    C_elt00 = std_reg(32);
+    C_elt01 = std_reg(32);
+    C_elt02 = std_reg(32);
+    C_elt03 = std_reg(32);
+
+    C_elt10 = std_reg(32);
+    C_elt11 = std_reg(32);
+    C_elt12 = std_reg(32);
+    C_elt13 = std_reg(32);
+
+    C_elt20 = std_reg(32);
+    C_elt21 = std_reg(32);
+    C_elt22 = std_reg(32);
+    C_elt23 = std_reg(32);
+
+    C_elt30 = std_reg(32);
+    C_elt31 = std_reg(32);
+    C_elt32 = std_reg(32);
+    C_elt33 = std_reg(32);
+  } 
+  wires {
+    group do_00 {
+      C_elt00.in = d00.out;
+      C_elt00.write_en = 1'd1;
+      do_00[done] = d00.done;
+      d00.a0 = A_elt00.out;
+      d00.a1 = A_elt01.out;
+      d00.a2 = A_elt02.out;
+      d00.a3 = A_elt03.out;
+      d00.b0 = B_elt00.out;
+      d00.b1 = B_elt10.out;
+      d00.b2 = B_elt20.out;
+      d00.b3 = B_elt30.out;
+      d00.go = !d00.done ? 1'd1;
+    }
+    group do_01 {
+      C_elt01.in = d01.out;
+      C_elt01.write_en = 1'd1;
+      do_01[done] = d01.done;
+      d01.a0 = A_elt00.out;
+      d01.a1 = A_elt01.out;
+      d01.a2 = A_elt02.out;
+      d01.a3 = A_elt03.out;
+      d01.b0 = B_elt01.out;
+      d01.b1 = B_elt11.out;
+      d01.b2 = B_elt21.out;
+      d01.b3 = B_elt31.out;
+      d01.go = !d01.done ? 1'd1;
+    }
+    group do_02 {
+      C_elt02.in = d02.out;
+      C_elt02.write_en = 1'd1;
+      do_02[done] = d02.done;
+      d02.a0 = A_elt00.out;
+      d02.a1 = A_elt01.out;
+      d02.a2 = A_elt02.out;
+      d02.a3 = A_elt03.out;
+      d02.b0 = B_elt02.out;
+      d02.b1 = B_elt12.out;
+      d02.b2 = B_elt22.out;
+      d02.b3 = B_elt32.out;
+      d02.go = !d02.done ? 1'd1;
+    }
+    group do_03 {
+      C_elt03.in = d03.out;
+      C_elt03.write_en = 1'd1;
+      do_03[done] = d03.done;
+      d03.a0 = A_elt00.out;
+      d03.a1 = A_elt01.out;
+      d03.a2 = A_elt02.out;
+      d03.a3 = A_elt03.out;
+      d03.b0 = B_elt03.out;
+      d03.b1 = B_elt13.out;
+      d03.b2 = B_elt23.out;
+      d03.b3 = B_elt33.out;
+      d03.go = !d03.done ? 1'd1;
+    }
+    group do_10 {
+      C_elt10.in = d10.out;
+      C_elt10.write_en = 1'd1;
+      do_10[done] = d10.done;
+      d10.a0 = A_elt10.out;
+      d10.a1 = A_elt11.out;
+      d10.a2 = A_elt12.out;
+      d10.a3 = A_elt13.out;
+      d10.b0 = B_elt00.out;
+      d10.b1 = B_elt10.out;
+      d10.b2 = B_elt20.out;
+      d10.b3 = B_elt30.out;
+      d10.go = !d10.done ? 1'd1;
+    }
+    group do_11 {
+      C_elt11.in = d11.out;
+      C_elt11.write_en = 1'd1;
+      do_11[done] = d11.done;
+      d11.a0 = A_elt10.out;
+      d11.a1 = A_elt11.out;
+      d11.a2 = A_elt12.out;
+      d11.a3 = A_elt13.out;
+      d11.b0 = B_elt01.out;
+      d11.b1 = B_elt11.out;
+      d11.b2 = B_elt21.out;
+      d11.b3 = B_elt31.out;
+      d11.go = !d11.done ? 1'd1;
+    }
+    group do_12 {
+      C_elt12.in = d12.out;
+      C_elt12.write_en = 1'd1;
+      do_12[done] = d12.done;
+      d12.a0 = A_elt10.out;
+      d12.a1 = A_elt11.out;
+      d12.a2 = A_elt12.out;
+      d12.a3 = A_elt13.out;
+      d12.b0 = B_elt02.out;
+      d12.b1 = B_elt12.out;
+      d12.b2 = B_elt22.out;
+      d12.b3 = B_elt32.out;
+      d12.go = !d12.done ? 1'd1;
+    }
+    group do_13 {
+      C_elt13.in = d13.out;
+      C_elt13.write_en = 1'd1;
+      do_13[done] = d13.done;
+      d13.a0 = A_elt10.out;
+      d13.a1 = A_elt11.out;
+      d13.a2 = A_elt12.out;
+      d13.a3 = A_elt13.out;
+      d13.b0 = B_elt03.out;
+      d13.b1 = B_elt13.out;
+      d13.b2 = B_elt23.out;
+      d13.b3 = B_elt33.out;
+      d13.go = !d13.done ? 1'd1;
+    }
+    group do_20 {
+      C_elt20.in = d20.out;
+      C_elt20.write_en = 1'd1;
+      do_20[done] = d20.done;
+      d20.a0 = A_elt20.out;
+      d20.a1 = A_elt21.out;
+      d20.a2 = A_elt22.out;
+      d20.a3 = A_elt23.out;
+      d20.b0 = B_elt00.out;
+      d20.b1 = B_elt10.out;
+      d20.b2 = B_elt20.out;
+      d20.b3 = B_elt30.out;
+      d20.go = !d20.done ? 1'd1;
+    }
+    group do_21 {
+      C_elt21.in = d21.out;
+      C_elt21.write_en = 1'd1;
+      do_21[done] = d21.done;
+      d21.a0 = A_elt20.out;
+      d21.a1 = A_elt21.out;
+      d21.a2 = A_elt22.out;
+      d21.a3 = A_elt23.out;
+      d21.b0 = B_elt01.out;
+      d21.b1 = B_elt11.out;
+      d21.b2 = B_elt21.out;
+      d21.b3 = B_elt31.out;
+      d21.go = !d21.done ? 1'd1;
+    }
+    group do_22 {
+      C_elt22.in = d22.out;
+      C_elt22.write_en = 1'd1;
+      do_22[done] = d22.done;
+      d22.a0 = A_elt20.out;
+      d22.a1 = A_elt21.out;
+      d22.a2 = A_elt22.out;
+      d22.a3 = A_elt23.out;
+      d22.b0 = B_elt02.out;
+      d22.b1 = B_elt12.out;
+      d22.b2 = B_elt22.out;
+      d22.b3 = B_elt32.out;
+      d22.go = !d22.done ? 1'd1;
+    }
+    group do_23 {
+      C_elt23.in = d23.out;
+      C_elt23.write_en = 1'd1;
+      do_23[done] = d23.done;
+      d23.a0 = A_elt20.out;
+      d23.a1 = A_elt21.out;
+      d23.a2 = A_elt22.out;
+      d23.a3 = A_elt23.out;
+      d23.b0 = B_elt03.out;
+      d23.b1 = B_elt13.out;
+      d23.b2 = B_elt23.out;
+      d23.b3 = B_elt33.out;
+      d23.go = !d23.done ? 1'd1;
+    }
+    group do_30 {
+      C_elt30.in = d30.out;
+      C_elt30.write_en = 1'd1;
+      do_30[done] = d30.done;
+      d30.a0 = A_elt30.out;
+      d30.a1 = A_elt31.out;
+      d30.a2 = A_elt32.out;
+      d30.a3 = A_elt33.out;
+      d30.b0 = B_elt00.out;
+      d30.b1 = B_elt10.out;
+      d30.b2 = B_elt20.out;
+      d30.b3 = B_elt30.out;
+      d30.go = !d30.done ? 1'd1;
+    }
+    group do_31 {
+      C_elt31.in = d31.out;
+      C_elt31.write_en = 1'd1;
+      do_31[done] = d31.done;
+      d31.a0 = A_elt30.out;
+      d31.a1 = A_elt31.out;
+      d31.a2 = A_elt32.out;
+      d31.a3 = A_elt33.out;
+      d31.b0 = B_elt01.out;
+      d31.b1 = B_elt11.out;
+      d31.b2 = B_elt21.out;
+      d31.b3 = B_elt31.out;
+      d31.go = !d31.done ? 1'd1;
+    }
+    group do_32 {
+      C_elt32.in = d32.out;
+      C_elt32.write_en = 1'd1;
+      do_32[done] = d32.done;
+      d32.a0 = A_elt30.out;
+      d32.a1 = A_elt31.out;
+      d32.a2 = A_elt32.out;
+      d32.a3 = A_elt33.out;
+      d32.b0 = B_elt02.out;
+      d32.b1 = B_elt12.out;
+      d32.b2 = B_elt22.out;
+      d32.b3 = B_elt32.out;
+      d32.go = !d32.done ? 1'd1;
+    }
+    group do_33 {
+      C_elt33.in = d33.out;
+      C_elt33.write_en = 1'd1;
+      do_33[done] = d33.done;
+      d33.a0 = A_elt30.out;
+      d33.a1 = A_elt31.out;
+      d33.a2 = A_elt32.out;
+      d33.a3 = A_elt33.out;
+      d33.b0 = B_elt03.out;
+      d33.b1 = B_elt13.out;
+      d33.b2 = B_elt23.out;
+      d33.b3 = B_elt33.out;
+      d33.go = !d33.done ? 1'd1;
+    }
+    group readA00 {
+      matrixA.addr0 = 4'd0;
+      matrixA.addr1 = 4'd0;
+      A_elt00.in = matrixA.read_data;
+      A_elt00.write_en = 1'd1;
+      readA00[done] = A_elt00.done;
+    }
+    group readB00 {
+      matrixB.addr0 = 4'd0;
+      matrixB.addr1 = 4'd0;
+      B_elt00.in = matrixB.read_data;
+      B_elt00.write_en = 1'd1;
+      readB00[done] = B_elt00.done;
+    }
+    group readA01 {
+      matrixA.addr0 = 4'd0;
+      matrixA.addr1 = 4'd1;
+      A_elt01.in = matrixA.read_data;
+      A_elt01.write_en = 1'd1;
+      readA01[done] = A_elt01.done;
+    }
+    group readB01 {
+      matrixB.addr0 = 4'd0;
+      matrixB.addr1 = 4'd1;
+      B_elt01.in = matrixB.read_data;
+      B_elt01.write_en = 1'd1;
+      readB01[done] = B_elt01.done;
+    }
+    group readA02 {
+      matrixA.addr0 = 4'd0;
+      matrixA.addr1 = 4'd2;
+      A_elt02.in = matrixA.read_data;
+      A_elt02.write_en = 1'd1;
+      readA02[done] = A_elt02.done;
+    }
+    group readB02 {
+      matrixB.addr0 = 4'd0;
+      matrixB.addr1 = 4'd2;
+      B_elt02.in = matrixB.read_data;
+      B_elt02.write_en = 1'd1;
+      readB02[done] = B_elt02.done;
+    }
+    group readA03 {
+      matrixA.addr0 = 4'd0;
+      matrixA.addr1 = 4'd3;
+      A_elt03.in = matrixA.read_data;
+      A_elt03.write_en = 1'd1;
+      readA03[done] = A_elt03.done;
+    }
+    group readB03 {
+      matrixB.addr0 = 4'd0;
+      matrixB.addr1 = 4'd3;
+      B_elt03.in = matrixB.read_data;
+      B_elt03.write_en = 1'd1;
+      readB03[done] = B_elt03.done;
+    }
+    group readA10 {
+      matrixA.addr0 = 4'd1;
+      matrixA.addr1 = 4'd0;
+      A_elt10.in = matrixA.read_data;
+      A_elt10.write_en = 1'd1;
+      readA10[done] = A_elt10.done;
+    }
+    group readB10 {
+      matrixB.addr0 = 4'd1;
+      matrixB.addr1 = 4'd0;
+      B_elt10.in = matrixB.read_data;
+      B_elt10.write_en = 1'd1;
+      readB10[done] = B_elt10.done;
+    }
+    group readA11 {
+      matrixA.addr0 = 4'd1;
+      matrixA.addr1 = 4'd1;
+      A_elt11.in = matrixA.read_data;
+      A_elt11.write_en = 1'd1;
+      readA11[done] = A_elt11.done;
+    }
+    group readB11 {
+      matrixB.addr0 = 4'd1;
+      matrixB.addr1 = 4'd1;
+      B_elt11.in = matrixB.read_data;
+      B_elt11.write_en = 1'd1;
+      readB11[done] = B_elt11.done;
+    }
+    group readA12 {
+      matrixA.addr0 = 4'd1;
+      matrixA.addr1 = 4'd2;
+      A_elt12.in = matrixA.read_data;
+      A_elt12.write_en = 1'd1;
+      readA12[done] = A_elt12.done;
+    }
+    group readB12 {
+      matrixB.addr0 = 4'd1;
+      matrixB.addr1 = 4'd2;
+      B_elt12.in = matrixB.read_data;
+      B_elt12.write_en = 1'd1;
+      readB12[done] = B_elt12.done;
+    }
+    group readA13 {
+      matrixA.addr0 = 4'd1;
+      matrixA.addr1 = 4'd3;
+      A_elt13.in = matrixA.read_data;
+      A_elt13.write_en = 1'd1;
+      readA13[done] = A_elt13.done;
+    }
+    group readB13 {
+      matrixB.addr0 = 4'd1;
+      matrixB.addr1 = 4'd3;
+      B_elt13.in = matrixB.read_data;
+      B_elt13.write_en = 1'd1;
+      readB13[done] = B_elt13.done;
+    }
+    group readA20 {
+      matrixA.addr0 = 4'd2;
+      matrixA.addr1 = 4'd0;
+      A_elt20.in = matrixA.read_data;
+      A_elt20.write_en = 1'd1;
+      readA20[done] = A_elt20.done;
+    }
+    group readB20 {
+      matrixB.addr0 = 4'd2;
+      matrixB.addr1 = 4'd0;
+      B_elt20.in = matrixB.read_data;
+      B_elt20.write_en = 1'd1;
+      readB20[done] = B_elt20.done;
+    }
+    group readA21 {
+      matrixA.addr0 = 4'd2;
+      matrixA.addr1 = 4'd1;
+      A_elt21.in = matrixA.read_data;
+      A_elt21.write_en = 1'd1;
+      readA21[done] = A_elt21.done;
+    }
+    group readB21 {
+      matrixB.addr0 = 4'd2;
+      matrixB.addr1 = 4'd1;
+      B_elt21.in = matrixB.read_data;
+      B_elt21.write_en = 1'd1;
+      readB21[done] = B_elt21.done;
+    }
+    group readA22 {
+      matrixA.addr0 = 4'd2;
+      matrixA.addr1 = 4'd2;
+      A_elt22.in = matrixA.read_data;
+      A_elt22.write_en = 1'd1;
+      readA22[done] = A_elt22.done;
+    }
+    group readB22 {
+      matrixB.addr0 = 4'd2;
+      matrixB.addr1 = 4'd2;
+      B_elt22.in = matrixB.read_data;
+      B_elt22.write_en = 1'd1;
+      readB22[done] = B_elt22.done;
+    }
+    group readA23 {
+      matrixA.addr0 = 4'd2;
+      matrixA.addr1 = 4'd3;
+      A_elt23.in = matrixA.read_data;
+      A_elt23.write_en = 1'd1;
+      readA23[done] = A_elt23.done;
+    }
+    group readB23 {
+      matrixB.addr0 = 4'd2;
+      matrixB.addr1 = 4'd3;
+      B_elt23.in = matrixB.read_data;
+      B_elt23.write_en = 1'd1;
+      readB23[done] = B_elt23.done;
+    }
+    group readA30 {
+      matrixA.addr0 = 4'd3;
+      matrixA.addr1 = 4'd0;
+      A_elt30.in = matrixA.read_data;
+      A_elt30.write_en = 1'd1;
+      readA30[done] = A_elt30.done;
+    }
+    group readB30 {
+      matrixB.addr0 = 4'd3;
+      matrixB.addr1 = 4'd0;
+      B_elt30.in = matrixB.read_data;
+      B_elt30.write_en = 1'd1;
+      readB30[done] = B_elt30.done;
+    }
+    group readA31 {
+      matrixA.addr0 = 4'd3;
+      matrixA.addr1 = 4'd1;
+      A_elt31.in = matrixA.read_data;
+      A_elt31.write_en = 1'd1;
+      readA31[done] = A_elt31.done;
+    }
+    group readB31 {
+      matrixB.addr0 = 4'd3;
+      matrixB.addr1 = 4'd1;
+      B_elt31.in = matrixB.read_data;
+      B_elt31.write_en = 1'd1;
+      readB31[done] = B_elt31.done;
+    }
+    group readA32 {
+      matrixA.addr0 = 4'd3;
+      matrixA.addr1 = 4'd2;
+      A_elt32.in = matrixA.read_data;
+      A_elt32.write_en = 1'd1;
+      readA32[done] = A_elt32.done;
+    }
+    group readB32 {
+      matrixB.addr0 = 4'd3;
+      matrixB.addr1 = 4'd2;
+      B_elt32.in = matrixB.read_data;
+      B_elt32.write_en = 1'd1;
+      readB32[done] = B_elt32.done;
+    }
+    group readA33 {
+      matrixA.addr0 = 4'd3;
+      matrixA.addr1 = 4'd3;
+      A_elt33.in = matrixA.read_data;
+      A_elt33.write_en = 1'd1;
+      readA33[done] = A_elt33.done;
+    }
+    group readB33 {
+      matrixB.addr0 = 4'd3;
+      matrixB.addr1 = 4'd3;
+      B_elt33.in = matrixB.read_data;
+      B_elt33.write_en = 1'd1;
+      readB33[done] = B_elt33.done;
+    }
+    group write00 {
+      matrixC.addr0 = 4'd0;
+      matrixC.addr1 = 4'd0;
+      matrixC.write_data = C_elt00.out;
+      matrixC.write_en = 1'd1;
+      write00[done] = matrixC.done;
+    }
+    group write01 {
+      matrixC.addr0 = 4'd0;
+      matrixC.addr1 = 4'd1;
+      matrixC.write_data = C_elt01.out;
+      matrixC.write_en = 1'd1;
+      write01[done] = matrixC.done;
+    }
+    group write02 {
+      matrixC.addr0 = 4'd0;
+      matrixC.addr1 = 4'd2;
+      matrixC.write_data = C_elt02.out;
+      matrixC.write_en = 1'd1;
+      write02[done] = matrixC.done;
+    }
+    group write03 {
+      matrixC.addr0 = 4'd0;
+      matrixC.addr1 = 4'd3;
+      matrixC.write_data = C_elt03.out;
+      matrixC.write_en = 1'd1;
+      write03[done] = matrixC.done;
+    }
+    group write10 {
+      matrixC.addr0 = 4'd1;
+      matrixC.addr1 = 4'd0;
+      matrixC.write_data = C_elt10.out;
+      matrixC.write_en = 1'd1;
+      write10[done] = matrixC.done;
+    }
+    group write11 {
+      matrixC.addr0 = 4'd1;
+      matrixC.addr1 = 4'd1;
+      matrixC.write_data = C_elt11.out;
+      matrixC.write_en = 1'd1;
+      write11[done] = matrixC.done;
+    }
+    group write12 {
+      matrixC.addr0 = 4'd1;
+      matrixC.addr1 = 4'd2;
+      matrixC.write_data = C_elt12.out;
+      matrixC.write_en = 1'd1;
+      write12[done] = matrixC.done;
+    }
+    group write13 {
+      matrixC.addr0 = 4'd1;
+      matrixC.addr1 = 4'd3;
+      matrixC.write_data = C_elt13.out;
+      matrixC.write_en = 1'd1;
+      write13[done] = matrixC.done;
+    }
+    group write20 {
+      matrixC.addr0 = 4'd2;
+      matrixC.addr1 = 4'd0;
+      matrixC.write_data = C_elt20.out;
+      matrixC.write_en = 1'd1;
+      write20[done] = matrixC.done;
+    }
+    group write21 {
+      matrixC.addr0 = 4'd2;
+      matrixC.addr1 = 4'd1;
+      matrixC.write_data = C_elt21.out;
+      matrixC.write_en = 1'd1;
+      write21[done] = matrixC.done;
+    }
+    group write22 {
+      matrixC.addr0 = 4'd2;
+      matrixC.addr1 = 4'd2;
+      matrixC.write_data = C_elt22.out;
+      matrixC.write_en = 1'd1;
+      write22[done] = matrixC.done;
+    }
+    group write23 {
+      matrixC.addr0 = 4'd2;
+      matrixC.addr1 = 4'd3;
+      matrixC.write_data = C_elt23.out;
+      matrixC.write_en = 1'd1;
+      write23[done] = matrixC.done;
+    }
+    group write30 {
+      matrixC.addr0 = 4'd3;
+      matrixC.addr1 = 4'd0;
+      matrixC.write_data = C_elt30.out;
+      matrixC.write_en = 1'd1;
+      write30[done] = matrixC.done;
+    }
+    group write31 {
+      matrixC.addr0 = 4'd3;
+      matrixC.addr1 = 4'd1;
+      matrixC.write_data = C_elt31.out;
+      matrixC.write_en = 1'd1;
+      write31[done] = matrixC.done;
+    }
+    group write32 {
+      matrixC.addr0 = 4'd3;
+      matrixC.addr1 = 4'd2;
+      matrixC.write_data = C_elt32.out;
+      matrixC.write_en = 1'd1;
+      write32[done] = matrixC.done;
+    }
+    group write33 {
+      matrixC.addr0 = 4'd3;
+      matrixC.addr1 = 4'd3;
+      matrixC.write_data = C_elt33.out;
+      matrixC.write_en = 1'd1;
+      write33[done] = matrixC.done;
+    }
+  }
+  control {
+    seq {
+      par {
+        readA00;
+        readB00;
+      }
+      par {
+        readA01;
+        readB01;
+      }
+      par {
+        readA02;
+        readB02;
+      }
+      par {
+        readA03;
+        readB03;
+      }
+      par {
+        readA10;
+        readB10;
+      }
+      par {
+        readA11;
+        readB11;
+      }
+      par {
+        readA12;
+        readB12;
+      }
+      par {
+        readA13;
+        readB13;
+      }
+      par {
+        readA20;
+        readB20;
+      }
+      par {
+        readA21;
+        readB21;
+      }
+      par {
+        readA22;
+        readB22;
+      }
+      par {
+        readA23;
+        readB23;
+      }
+      par {
+        readA30;
+        readB30;
+      }
+      par {
+        readA31;
+        readB31;
+      }
+      par {
+        readA32;
+        readB32;
+      }
+      par {
+        readA33;
+        readB33;
+      }
+      par {
+        do_00;
+        do_01;
+        do_02;
+        do_03;
+        
+        do_10;
+        do_11;
+        do_12;
+        do_13;
+
+        do_20;
+        do_21;
+        do_22;
+        do_23;
+
+        do_30;
+        do_31;
+        do_32;
+        do_33;
+      }
+      write00;
+      write01;
+      write02;
+      write03;
+      write10;
+      write11;
+      write12;
+      write13;
+      write20;
+      write21;
+      write22;
+      write23;
+      write30;
+      write31;
+      write32;
+      write33;
+    }
+  }
+}

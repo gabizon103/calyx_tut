@@ -1,5 +1,5 @@
-import "../calyx/primitives/core.futil";
-import "../calyx/primitives/binary_operators.futil";
+import "calyx/primitives/core.futil";
+import "calyx/primitives/binary_operators.futil";
 
 // A 4x4 matrix multiplier.
 // Runs in 542 cycles. For each dot product, the multiplications are computed
@@ -240,14 +240,6 @@ component main () -> () {
       matrixC.write_en = 1'd1;
       write_result[done] = matrixC.done;
     }
-
-    // group incr_dot {
-    //   dot_add.left = dot_counter.out;
-    //   dot_add.right = 4'd1;
-    //   dot_counter.in = dot_add.out;
-    //   dot_counter.write_en = 1'd1;
-    //   incr_dot[done] = dot_counter.done ? 1'd1;
-    // }
 
     group incr_row {
       add_row.left = rowc.out;

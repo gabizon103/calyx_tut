@@ -1,0 +1,125 @@
+import "primitives/core.futil";
+import "primitives/binary_operators.futil";
+
+component dotprod2(a0:32, a1:32, a2:32, a3:32, b0:32, b1:32, b2:32, b3:32) -> (out:32) {
+  cells {
+    mult0 = std_mult_pipe(32);
+    mult1 = std_mult_pipe(32);
+    mult2 = std_mult_pipe(32);
+    mult3 = std_mult_pipe(32);
+
+    adder0 = std_add(32);
+    adder1 = std_add(32);
+    adder2 = std_add(32);
+
+    prod0 = std_reg(32);
+    prod1 = std_reg(32);
+    prod2 = std_reg(32);
+    prod3 = std_reg(32);
+    prod4 = std_reg(32);
+    prod5 = std_reg(32);
+    prod6 = std_reg(32);
+    prod7 = std_reg(32);
+
+    sum0 = std_reg(32);
+    sum1 = std_reg(32);
+    sum2 = std_reg(32);
+  }
+  wires {
+    group do_mult0 {
+      prod0.in = mult0.out;
+      prod0.write_en = mult0.done;
+      do_mult0[done] = prod0.done;
+      mult0.left = a0;
+      mult0.right = b0;
+      mult0.go = !mult0.done ? 1'd1;
+    }
+    group do_mult1 {
+      prod1.in = mult1.out;
+      prod1.write_en = mult1.done;
+      do_mult1[done] = prod1.done;
+      mult1.left = a1;
+      mult1.right = b1;
+      mult1.go = !mult1.done ? 1'd1;
+    }
+    group do_mult2 {
+      prod2.in = mult2.out;
+      prod2.write_en = mult2.done;
+      do_mult2[done] = prod2.done;
+      mult2.left = a2;
+      mult2.right = b2;
+      mult2.go = !mult2.done ? 1'd1;
+    }
+    group do_mult3 {
+      prod3.in = mult3.out;
+      prod3.write_en = mult3.done;
+      do_mult3[done] = prod3.done;
+      mult3.left = a3;
+      mult3.right = b3;
+      mult3.go = !mult3.done ? 1'd1;
+    }
+    group store0 {
+      prod4.in = prod0.out;
+      prod4.write_en = 1'd1;
+      store0[done] = prod4.done;
+    }
+    group store1 {
+      prod5.in = prod1.out;
+      prod5.write_en = 1'd1;
+      store1[done] = prod5.done;
+    }
+    group store2 {
+      prod6.in = prod2.out;
+      prod6.write_en = 1'd1;
+      store2[done] = prod6.done;
+    }
+    group store3 {
+      prod7.in = prod3.out;
+      prod7.write_en = 1'd1;
+      store3[done] = prod7.done;
+    }
+    group add0 {
+      adder0.left = prod4.out;
+      adder0.right = prod5.out;
+      sum0.in = adder0.out;
+      sum0.write_en = 1'd1;
+      add0[done] = sum0.done;
+    }
+    group add1 {
+      adder1.left = prod6.out;
+      adder1.right = prod7.out;
+      sum1.in = adder1.out;
+      sum1.write_en = 1'd1;
+      add1[done] = sum1.done;
+    }
+    group add2 {
+      adder2.left = sum0.out;
+      adder2.right = sum1.out;
+      sum2.in = adder2.out;
+      sum2.write_en = 1'd1;
+      add2[done] = sum2.done;
+    }
+    out = sum2.out;
+  }
+  control {
+    seq {
+      par {
+        do_mult0;
+        do_mult1;
+        do_mult2;
+        do_mult3;
+      }
+      par {
+        store0;
+        store1;
+        store2;
+        store3;
+      }
+      par {
+        add0;
+        add1;
+      }
+      add2;
+    }
+  }
+}
