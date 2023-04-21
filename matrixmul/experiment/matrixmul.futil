@@ -1,5 +1,5 @@
-import "../calyx/primitives/core.futil";
-import "../calyx/primitives/binary_operators.futil";
+import "calyx/primitives/core.futil";
+import "calyx/primitives/binary_operators.futil";
 import "calyx_tut/matrixmul/dotprod.futil";
 
 component main() -> () {

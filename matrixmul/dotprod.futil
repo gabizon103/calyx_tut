@@ -1,6 +1,5 @@
-import "../calyx/primitives/core.futil";
-import "../calyx/primitives/binary_operators.futil";
-import "../calyx/primitives/unsynthesizable.futil";
+import "primitives/core.futil";
+import "primitives/binary_operators.futil";
 
 // matrix multiplication to compute A*B
 

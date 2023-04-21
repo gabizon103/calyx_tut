@@ -1,5 +1,5 @@
-import "../calyx/primitives/core.futil";
-import "../calyx/primitives/binary_operators.futil";
+import "primitives/core.futil";
+import "primitives/binary_operators.futil";
 
 // A 4x4 matrix multiplier.
 // Runs in 1424 cycles, but I guess you could call it resource-efficient
